@@ -2,10 +2,12 @@ import { defineStore } from "pinia"
 import { ref } from "vue"
 
 import { refreshToken } from "@/api/user"
+import type {User} from "@/types/user.ts";
 
 export const useUserStore = defineStore('user', () => {
         const token = ref<string | null>(null)
-        const user = ref(null)
+        const refreshTokenValue = ref<string | null>(null)
+        const user = ref<User | null >( null )
 
         const users = ref([])
 
@@ -15,6 +17,14 @@ export const useUserStore = defineStore('user', () => {
 
         const getToken = () => {
             return token.value
+        }
+
+        const setRefreshToken = (t: string) => {
+            refreshTokenValue.value = t
+        }
+
+        const getRefreshToken = () => {
+            return refreshTokenValue.value
         }
 
         const setUser = (t:any) => {
@@ -41,6 +51,7 @@ export const useUserStore = defineStore('user', () => {
         const clearUser = () => {
             user.value = null
             token.value = null
+            refreshTokenValue.value = null
         }
 
         const setUsers = (t:any) => {
@@ -48,13 +59,17 @@ export const useUserStore = defineStore('user', () => {
         }
 
         const refreshUserToken = async () =>{
-            if(!token.value){
+            if(!refreshTokenValue.value){
                 return false
             }
             try{
-                const res = await refreshToken()
-                if(res && res.token){
-                    setToken(res.token)
+                const res = await refreshToken(refreshTokenValue.value)
+                if(res && res.data?.token){
+                    setToken(res.data.token)
+                    // 刷新接口若返回新的长 token，一并更新
+                    if(res.data?.refresh_token){
+                        setRefreshToken(res.data.refresh_token)
+                    }
                     return true
                 }
             }catch(err){
@@ -64,12 +79,12 @@ export const useUserStore = defineStore('user', () => {
             }
         }
 
-        return { user, setUser, getUser, token, setToken, getToken, setUserAvatar, getUserAvatar, clearUser, users, setUsers, refreshUserToken }
+        return { user, setUser, getUser, token, setToken, getToken, refreshTokenValue, setRefreshToken, getRefreshToken, setUserAvatar, getUserAvatar, clearUser, users, setUsers, refreshUserToken }
     },
     {
         persist: {
             key: 'auth',
-            pick: ['token', 'user']
+            pick: ['token', 'refreshTokenValue', 'user']
         },
     }
 )
